@@ -9,3 +9,6 @@ license.workspace = true
 [dependencies]
 ash = "0.37.3"
 winit.workspace = true
+
+[dev-dependencies]
+clippy.workspace = true

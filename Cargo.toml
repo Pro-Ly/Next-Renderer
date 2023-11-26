@@ -6,3 +6,4 @@ license = "Apache-2.0"
 
 [workspace.dependencies]
 winit = "0.29.4"
+clippy = "0.0.302"

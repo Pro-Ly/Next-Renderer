@@ -1,33 +1,29 @@
+#![deny(clippy::pedantic)]
+mod window;
+
 use std::{
     borrow::Cow,
     ffi::{CStr, CString},
     io::Cursor,
-    mem::{self, align_of},
+    mem::{self},
 };
 
 use ash::{
     extensions::{
         ext::{DebugUtils, MetalSurface},
         khr::{
-            self, AndroidSurface, Surface, Swapchain, WaylandSurface, Win32Surface, XcbSurface,
+            AndroidSurface, Surface, Swapchain, WaylandSurface, Win32Surface, XcbSurface,
             XlibSurface,
         },
     },
-    prelude::VkResult,
-    util::{read_spv, Align},
+    util::Align,
     vk::{
         self, ApplicationInfo, ExtSwapchainColorspaceFn, KhrGetPhysicalDeviceProperties2Fn,
         KhrPortabilityEnumerationFn,
     },
     Device, Entry, Instance,
 };
-use winit::{
-    event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-    raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle},
-    window::{Window, WindowBuilder},
-};
-
+use window::Window;
 #[derive(Clone, Debug, Copy)]
 struct Vertex {
     pos: [f32; 4],
@@ -35,8 +31,7 @@ struct Vertex {
 }
 
 struct TrianglApplication {
-    _window: Window,
-    event_loop: EventLoop<()>,
+    window: Window,
 
     pub _entry: Entry,
     pub _instance: Instance,
@@ -73,17 +68,12 @@ struct TrianglApplication {
 }
 
 impl TrianglApplication {
+    #[allow(clippy::vec_init_then_push)]
+    #[allow(clippy::too_many_lines)]
     pub fn new(window_width: u32, window_height: u32) -> Self {
         unsafe {
             // ----------window part----------
-            let event_loop = EventLoop::new().unwrap();
-            let window = WindowBuilder::new()
-                .with_title("Triangle")
-                .with_inner_size(winit::dpi::LogicalSize::new(window_width, window_height))
-                .with_resizable(false)
-                .build(&event_loop)
-                .unwrap();
-
+            let window = Window::new(window_width, window_height);
             // ----------vulkan part----------
 
             // load vulkan library
@@ -149,7 +139,7 @@ impl TrianglApplication {
             extensions.retain(|&ext| {
                 if instance_extensions
                     .iter()
-                    .any(|inst_ext| CStr::from_ptr((&inst_ext.extension_name).as_ptr()) == ext)
+                    .any(|inst_ext| CStr::from_ptr(inst_ext.extension_name.as_ptr()) == ext)
                 {
                     true
                 } else {
@@ -162,16 +152,21 @@ impl TrianglApplication {
             layers.push(CStr::from_bytes_with_nul(b"VK_LAYER_KHRONOS_validation\0").unwrap());
 
             // setup debug messenger
-            let mut debug_info = vk::DebugUtilsMessengerCreateInfoEXT::default();
-            debug_info.message_severity =
-            // vk::DebugUtilsMessageSeverityFlagsEXT::VERBOSE
-                // | vk::DebugUtilsMessageSeverityFlagsEXT::INFO
-                 vk::DebugUtilsMessageSeverityFlagsEXT::WARNING
-                | vk::DebugUtilsMessageSeverityFlagsEXT::ERROR;
-            debug_info.message_type = vk::DebugUtilsMessageTypeFlagsEXT::VALIDATION
-                | vk::DebugUtilsMessageTypeFlagsEXT::PERFORMANCE
-                | vk::DebugUtilsMessageTypeFlagsEXT::GENERAL;
-            debug_info.pfn_user_callback = Some(Self::vulkan_debug_callback);
+            let mut debug_info = vk::DebugUtilsMessengerCreateInfoEXT::builder()
+                .message_severity(
+                    // vk::DebugUtilsMessageSeverityFlagsEXT::VERBOSE
+                    //     | vk::DebugUtilsMessageSeverityFlagsEXT::INFO
+                    //     |
+                    vk::DebugUtilsMessageSeverityFlagsEXT::WARNING
+                        | vk::DebugUtilsMessageSeverityFlagsEXT::ERROR,
+                )
+                .message_type(
+                    vk::DebugUtilsMessageTypeFlagsEXT::GENERAL
+                        | vk::DebugUtilsMessageTypeFlagsEXT::VALIDATION
+                        | vk::DebugUtilsMessageTypeFlagsEXT::PERFORMANCE,
+                )
+                .pfn_user_callback(Some(Self::vulkan_debug_callback))
+                .build();
 
             // create vulkan instance
             let create_flags = if cfg!(any(target_os = "macos", target_os = "ios")) {
@@ -201,14 +196,7 @@ impl TrianglApplication {
             };
 
             // create vulkan surface
-            let surface = Self::create_surface(
-                &entry,
-                &instance,
-                window.display_handle().unwrap().as_raw(),
-                window.window_handle().unwrap().as_raw(),
-                None,
-            )
-            .unwrap();
+            let surface = window.create_surface_vk(&entry, &instance, None).unwrap();
 
             // select physics device
             let available_physical_devices = instance.enumerate_physical_devices().unwrap();
@@ -230,7 +218,7 @@ impl TrianglApplication {
                                     && surface_loader
                                         .get_physical_device_surface_support(
                                             *physical_device,
-                                            index as u32,
+                                            u32::try_from(index).unwrap(),
                                             surface,
                                         )
                                         .unwrap();
@@ -242,7 +230,7 @@ impl TrianglApplication {
                         })
                 })
                 .expect("Couldn't find suitable device.");
-            let queue_family_index = queue_family_index as u32;
+            let queue_family_index = u32::try_from(queue_family_index).unwrap();
             let device_extension_names_raw = [
                 Swapchain::name().as_ptr(),
                 #[cfg(any(target_os = "macos", target_os = "ios"))]
@@ -305,7 +293,7 @@ impl TrianglApplication {
                 .unwrap();
             let present_mode = present_modes
                 .iter()
-                .cloned()
+                .copied()
                 .find(|&mode| mode == vk::PresentModeKHR::MAILBOX)
                 .unwrap_or(vk::PresentModeKHR::FIFO);
             let swapchain_loader = Swapchain::new(&instance, &device);
@@ -485,8 +473,7 @@ impl TrianglApplication {
                 .unwrap();
 
             Self {
-                _window: window,
-                event_loop,
+                window,
                 _entry: entry,
                 _instance: instance,
                 device,
@@ -516,6 +503,7 @@ impl TrianglApplication {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn run(self) {
         let renderpass_attachments = [
             vk::AttachmentDescription {
@@ -631,7 +619,7 @@ impl TrianglApplication {
         let mut index_slice = unsafe {
             Align::new(
                 index_ptr,
-                align_of::<u32>() as u64,
+                mem::align_of::<u32>() as u64,
                 index_buffer_memory_req.size,
             )
         };
@@ -640,7 +628,7 @@ impl TrianglApplication {
         unsafe {
             self.device
                 .bind_buffer_memory(index_buffer, index_buffer_memory, 0)
-                .unwrap()
+                .unwrap();
         };
 
         let vertex_input_buffer_info = vk::BufferCreateInfo {
@@ -709,7 +697,7 @@ impl TrianglApplication {
         let mut vert_align = unsafe {
             Align::new(
                 vert_ptr,
-                align_of::<Vertex>() as u64,
+                mem::align_of::<Vertex>() as u64,
                 vertex_input_buffer_memory_req.size,
             )
         };
@@ -718,19 +706,19 @@ impl TrianglApplication {
         unsafe {
             self.device
                 .bind_buffer_memory(vertex_input_buffer, vertex_input_buffer_memory, 0)
-                .unwrap()
+                .unwrap();
         };
         let mut vertex_spv_file = Cursor::new(&include_bytes!("../shaders/vert.spv")[..]);
         let mut frag_spv_file = Cursor::new(&include_bytes!("../shaders/frag.spv")[..]);
 
-        let vertex_code =
-            read_spv(&mut vertex_spv_file).expect("Failed to read vertex shader spv file");
+        let vertex_code = ash::util::read_spv(&mut vertex_spv_file)
+            .expect("Failed to read vertex shader spv file");
         let vertex_shader_info = vk::ShaderModuleCreateInfo::builder()
             .code(&vertex_code)
             .build();
 
-        let frag_code =
-            read_spv(&mut frag_spv_file).expect("Failed to read fragment shader spv file");
+        let frag_code = ash::util::read_spv(&mut frag_spv_file)
+            .expect("Failed to read fragment shader spv file");
         let frag_shader_info = vk::ShaderModuleCreateInfo::builder()
             .code(&frag_code)
             .build();
@@ -773,7 +761,7 @@ impl TrianglApplication {
         ];
         let vertex_input_binding_descriptions = [vk::VertexInputBindingDescription {
             binding: 0,
-            stride: mem::size_of::<Vertex>() as u32,
+            stride: u32::try_from(mem::size_of::<Vertex>()).unwrap(),
             input_rate: vk::VertexInputRate::VERTEX,
         }];
         let vertex_input_attribute_descriptions = [
@@ -781,13 +769,13 @@ impl TrianglApplication {
                 location: 0,
                 binding: 0,
                 format: vk::Format::R32G32B32A32_SFLOAT,
-                offset: offset_of!(Vertex, pos) as u32,
+                offset: u32::try_from(offset_of!(Vertex, pos)).unwrap(),
             },
             vk::VertexInputAttributeDescription {
                 location: 1,
                 binding: 0,
                 format: vk::Format::R32G32B32A32_SFLOAT,
-                offset: offset_of!(Vertex, color) as u32,
+                offset: u32::try_from(offset_of!(Vertex, color)).unwrap(),
             },
         ];
 
@@ -799,6 +787,7 @@ impl TrianglApplication {
             topology: vk::PrimitiveTopology::TRIANGLE_LIST,
             ..Default::default()
         };
+        #[allow(clippy::cast_precision_loss)]
         let viewports = [vk::Viewport {
             x: 0.0,
             y: 0.0,
@@ -885,123 +874,111 @@ impl TrianglApplication {
 
         let graphic_pipeline = graphics_pipelines[0];
 
-        self.event_loop.set_control_flow(ControlFlow::Poll);
-        self.event_loop
-            .run(|event, control_flow| match event {
-                Event::WindowEvent { event, .. } => match event {
-                    WindowEvent::CloseRequested => control_flow.exit(),
-                    WindowEvent::RedrawRequested => {
-                        let (present_index, _) = unsafe {
-                            self.swapchain_loader
-                                .acquire_next_image(
-                                    self.swapchain,
-                                    std::u64::MAX,
-                                    self.present_complete_semaphore,
-                                    vk::Fence::null(),
-                                )
-                                .unwrap()
-                        };
-                        let clear_values = [
-                            vk::ClearValue {
-                                color: vk::ClearColorValue {
-                                    float32: [0.0, 0.0, 0.0, 0.0],
-                                },
-                            },
-                            vk::ClearValue {
-                                depth_stencil: vk::ClearDepthStencilValue {
-                                    depth: 1.0,
-                                    stencil: 0,
-                                },
-                            },
-                        ];
+        self.window
+            .run(|| {
+                let (present_index, _) = unsafe {
+                    self.swapchain_loader
+                        .acquire_next_image(
+                            self.swapchain,
+                            std::u64::MAX,
+                            self.present_complete_semaphore,
+                            vk::Fence::null(),
+                        )
+                        .unwrap()
+                };
+                let clear_values = [
+                    vk::ClearValue {
+                        color: vk::ClearColorValue {
+                            float32: [0.0, 0.0, 0.0, 0.0],
+                        },
+                    },
+                    vk::ClearValue {
+                        depth_stencil: vk::ClearDepthStencilValue {
+                            depth: 1.0,
+                            stencil: 0,
+                        },
+                    },
+                ];
 
-                        let render_pass_begin_info = vk::RenderPassBeginInfo::builder()
-                            .render_pass(renderpass)
-                            .framebuffer(framebuffers[present_index as usize])
-                            .render_area(self.surface_resolution.into())
-                            .clear_values(&clear_values)
-                            .build();
+                let render_pass_begin_info = vk::RenderPassBeginInfo::builder()
+                    .render_pass(renderpass)
+                    .framebuffer(framebuffers[present_index as usize])
+                    .render_area(self.surface_resolution.into())
+                    .clear_values(&clear_values)
+                    .build();
 
-                        Self::record_submit_commandbuffer(
-                            &self.device,
-                            self.draw_command_buffer,
-                            self.draw_commands_reuse_fence,
-                            self.present_queue,
-                            &[vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT],
-                            &[self.present_complete_semaphore],
-                            &[self.rendering_complete_semaphore],
-                            |device, draw_command_buffer| {
-                                unsafe {
-                                    device.cmd_begin_render_pass(
-                                        draw_command_buffer,
-                                        &render_pass_begin_info,
-                                        vk::SubpassContents::INLINE,
-                                    )
-                                };
-                                unsafe {
-                                    device.cmd_bind_pipeline(
-                                        draw_command_buffer,
-                                        vk::PipelineBindPoint::GRAPHICS,
-                                        graphic_pipeline,
-                                    )
-                                };
-                                unsafe {
-                                    device.cmd_set_viewport(draw_command_buffer, 0, &viewports)
-                                };
-                                unsafe {
-                                    device.cmd_set_scissor(draw_command_buffer, 0, &scissors)
-                                };
-                                unsafe {
-                                    device.cmd_bind_vertex_buffers(
-                                        draw_command_buffer,
-                                        0,
-                                        &[vertex_input_buffer],
-                                        &[0],
-                                    )
-                                };
-                                unsafe {
-                                    device.cmd_bind_index_buffer(
-                                        draw_command_buffer,
-                                        index_buffer,
-                                        0,
-                                        vk::IndexType::UINT32,
-                                    )
-                                };
-                                unsafe {
-                                    device.cmd_draw_indexed(
-                                        draw_command_buffer,
-                                        index_buffer_data.len() as u32,
-                                        1,
-                                        0,
-                                        0,
-                                        1,
-                                    )
-                                };
-                                // Or draw without the index buffer
-                                // device.cmd_draw(draw_command_buffer, 3, 1, 0, 0);
-                                unsafe { device.cmd_end_render_pass(draw_command_buffer) };
-                            },
-                        );
-                        //let mut present_info_err = mem::zeroed();
-                        let wait_semaphors = [self.rendering_complete_semaphore];
-                        let swapchains = [self.swapchain];
-                        let image_indices = [present_index];
-                        let present_info = vk::PresentInfoKHR::builder()
-                            .wait_semaphores(&wait_semaphors) // &base.rendering_complete_semaphore)
-                            .swapchains(&swapchains)
-                            .image_indices(&image_indices)
-                            .build();
-
+                Self::record_submit_commandbuffer(
+                    &self.device,
+                    self.draw_command_buffer,
+                    self.draw_commands_reuse_fence,
+                    self.present_queue,
+                    &[vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT],
+                    &[self.present_complete_semaphore],
+                    &[self.rendering_complete_semaphore],
+                    |device, draw_command_buffer| {
                         unsafe {
-                            self.swapchain_loader
-                                .queue_present(self.present_queue, &present_info)
-                                .unwrap()
+                            device.cmd_begin_render_pass(
+                                draw_command_buffer,
+                                &render_pass_begin_info,
+                                vk::SubpassContents::INLINE,
+                            );
                         };
-                        println!("RedrawRequested");
-                    }
-                    _ => (),
-                },
-                _ => (),
+                        unsafe {
+                            device.cmd_bind_pipeline(
+                                draw_command_buffer,
+                                vk::PipelineBindPoint::GRAPHICS,
+                                graphic_pipeline,
+                            );
+                        };
+                        unsafe { device.cmd_set_viewport(draw_command_buffer, 0, &viewports) };
+                        unsafe { device.cmd_set_scissor(draw_command_buffer, 0, &scissors) };
+                        unsafe {
+                            device.cmd_bind_vertex_buffers(
+                                draw_command_buffer,
+                                0,
+                                &[vertex_input_buffer],
+                                &[0],
+                            );
+                        };
+                        unsafe {
+                            device.cmd_bind_index_buffer(
+                                draw_command_buffer,
+                                index_buffer,
+                                0,
+                                vk::IndexType::UINT32,
+                            );
+                        };
+                        unsafe {
+                            device.cmd_draw_indexed(
+                                draw_command_buffer,
+                                u32::try_from(index_buffer_data.len()).unwrap(),
+                                1,
+                                0,
+                                0,
+                                1,
+                            );
+                        };
+                        // Or draw without the index buffer
+                        // device.cmd_draw(draw_command_buffer, 3, 1, 0, 0);
+                        unsafe { device.cmd_end_render_pass(draw_command_buffer) };
+                    },
+                );
+                //let mut present_info_err = mem::zeroed();
+                let wait_semaphors = [self.rendering_complete_semaphore];
+                let swapchains = [self.swapchain];
+                let image_indices = [present_index];
+                let present_info = vk::PresentInfoKHR::builder()
+                    .wait_semaphores(&wait_semaphors) // &base.rendering_complete_semaphore)
+                    .swapchains(&swapchains)
+                    .image_indices(&image_indices)
+                    .build();
+
+                unsafe {
+                    self.swapchain_loader
+                        .queue_present(self.present_queue, &present_info)
+                        .unwrap()
+                };
+                println!("RedrawRequested");
             })
             .unwrap();
     }
@@ -1068,6 +1045,7 @@ impl TrianglApplication {
         memory_prop: &vk::PhysicalDeviceMemoryProperties,
         flags: vk::MemoryPropertyFlags,
     ) -> Option<u32> {
+        #[allow(clippy::cast_possible_truncation)]
         memory_prop.memory_types[..memory_prop.memory_type_count as _]
             .iter()
             .enumerate()
@@ -1076,29 +1054,6 @@ impl TrianglApplication {
                     && memory_type.property_flags & flags == flags
             })
             .map(|(index, _memory_type)| index as _)
-    }
-
-    unsafe fn create_surface(
-        entry: &Entry,
-        instance: &Instance,
-        display_handle: RawDisplayHandle,
-        window_handle: RawWindowHandle,
-        allocation_callbacks: Option<&vk::AllocationCallbacks>,
-    ) -> VkResult<vk::SurfaceKHR> {
-        match (display_handle, window_handle) {
-            (RawDisplayHandle::Windows(_), RawWindowHandle::Win32(window)) => {
-                let surface_desc = vk::Win32SurfaceCreateInfoKHR::builder()
-                    .hinstance(window.hinstance.unwrap().get() as *mut _)
-                    .hwnd(window.hwnd.get() as *mut _)
-                    .build();
-                let surface_fn = khr::Win32Surface::new(entry, instance);
-                surface_fn.create_win32_surface(&surface_desc, allocation_callbacks)
-            }
-
-            _ => {
-                panic!("Unsupported platform!")
-            }
-        }
     }
 
     unsafe extern "system" fn vulkan_debug_callback(
