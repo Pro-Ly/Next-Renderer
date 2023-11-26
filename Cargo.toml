@@ -1,9 +1,19 @@
 [workspace]
-members = ["next-renderer"]
+members = ["next-renderer", "next-renderer-rhi"]
 
 [workspace.package]
 license = "Apache-2.0"
 
 [workspace.dependencies]
-winit = "0.29.4"
+# local
+next-renderer = { path = "./next-renderer" }
+next-renderer-rhi = { path = "./next-renderer-rhi" }
+
+# dev
 clippy = "0.0.302"
+
+# window
+winit = "0.29.4"
+
+# vulkan
+ash = "0.37.3"

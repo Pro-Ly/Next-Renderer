@@ -607,7 +607,16 @@ version = "0.1.0"
 dependencies = [
  "ash",
  "clippy",
+ "next-renderer-rhi",
  "winit",
+]
+
+[[package]]
+name = "next-renderer-rhi"
+version = "0.1.0"
+dependencies = [
+ "ash",
+ "clippy",
 ]
 
 [[package]]

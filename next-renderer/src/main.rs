@@ -1,28 +1,18 @@
 #![deny(clippy::pedantic)]
 mod window;
-
 use std::{
-    borrow::Cow,
-    ffi::{CStr, CString},
+    ffi::CStr,
     io::Cursor,
     mem::{self},
 };
 
 use ash::{
-    extensions::{
-        ext::{DebugUtils, MetalSurface},
-        khr::{
-            AndroidSurface, Surface, Swapchain, WaylandSurface, Win32Surface, XcbSurface,
-            XlibSurface,
-        },
-    },
+    extensions::khr::{Surface, Swapchain},
     util::Align,
-    vk::{
-        self, ApplicationInfo, ExtSwapchainColorspaceFn, KhrGetPhysicalDeviceProperties2Fn,
-        KhrPortabilityEnumerationFn,
-    },
-    Device, Entry, Instance,
+    vk::{self},
+    Device,
 };
+use next_renderer_rhi::Instance;
 use window::Window;
 #[derive(Clone, Debug, Copy)]
 struct Vertex {
@@ -32,9 +22,7 @@ struct Vertex {
 
 struct TrianglApplication {
     window: Window,
-
-    pub _entry: Entry,
-    pub _instance: Instance,
+    _instance: Instance,
     pub device: Device,
     pub _surface_loader: Surface,
     pub swapchain_loader: Swapchain,
@@ -75,141 +63,27 @@ impl TrianglApplication {
             // ----------window part----------
             let window = Window::new(window_width, window_height);
             // ----------vulkan part----------
-
-            // load vulkan library
-            let entry = Entry::load().unwrap();
-            let version = entry.try_enumerate_instance_version();
-            let api_version = version.unwrap().unwrap();
-            println!(
-                "Vulkan api_version: {}.{}.{}",
-                vk::api_version_major(api_version),
-                vk::api_version_minor(api_version),
-                vk::api_version_patch(api_version)
-            );
-            // create vulkan app
-            let app_name = CString::new("Triangle").unwrap();
-            let app_info = ApplicationInfo::builder()
-                .application_name(app_name.as_c_str())
-                .application_version(1)
-                .engine_name(CStr::from_bytes_with_nul(b"next-renderer\0").unwrap())
-                .engine_version(2)
-                .api_version(vk::API_VERSION_1_0);
-
-            // select vulkan extensions
-            let mut extensions: Vec<&'static CStr> = Vec::new();
-            extensions.push(DebugUtils::name());
-            extensions.push(Surface::name());
-            // Platform-specific WSI extensions
-            if cfg!(all(
-                unix,
-                not(target_os = "android"),
-                not(target_os = "macos")
-            )) {
-                // VK_KHR_xlib_surface
-                extensions.push(XlibSurface::name());
-                // VK_KHR_xcb_surface
-                extensions.push(XcbSurface::name());
-                // VK_KHR_wayland_surface
-                extensions.push(WaylandSurface::name());
-            }
-            if cfg!(target_os = "android") {
-                // VK_KHR_android_surface
-                extensions.push(AndroidSurface::name());
-            }
-            if cfg!(target_os = "windows") {
-                // VK_KHR_win32_surface
-                extensions.push(Win32Surface::name());
-            }
-            if cfg!(target_os = "macos") {
-                // VK_EXT_metal_surface
-                extensions.push(MetalSurface::name());
-                extensions.push(KhrPortabilityEnumerationFn::name());
-            }
-            // VK_EXT_swapchain_colorspace
-            // Provid wide color gamut
-            extensions.push(ExtSwapchainColorspaceFn::name());
-
-            // VK_KHR_get_physical_device_properties2
-            // Even though the extension was promoted to Vulkan 1.1, we still require the extension
-            // so that we don't have to conditionally use the functions provided by the 1.1 instance
-            extensions.push(KhrGetPhysicalDeviceProperties2Fn::name());
-
-            let instance_extensions = entry.enumerate_instance_extension_properties(None).unwrap();
-            // Only keep available extensions.
-            extensions.retain(|&ext| {
-                if instance_extensions
-                    .iter()
-                    .any(|inst_ext| CStr::from_ptr(inst_ext.extension_name.as_ptr()) == ext)
-                {
-                    true
-                } else {
-                    panic!("Unable to find extension: {}", ext.to_string_lossy());
-                }
-            });
-
-            // select vulkan layers
-            let mut layers: Vec<&'static CStr> = Vec::new();
-            layers.push(CStr::from_bytes_with_nul(b"VK_LAYER_KHRONOS_validation\0").unwrap());
-
-            // setup debug messenger
-            let mut debug_info = vk::DebugUtilsMessengerCreateInfoEXT::builder()
-                .message_severity(
-                    // vk::DebugUtilsMessageSeverityFlagsEXT::VERBOSE
-                    //     | vk::DebugUtilsMessageSeverityFlagsEXT::INFO
-                    //     |
-                    vk::DebugUtilsMessageSeverityFlagsEXT::WARNING
-                        | vk::DebugUtilsMessageSeverityFlagsEXT::ERROR,
-                )
-                .message_type(
-                    vk::DebugUtilsMessageTypeFlagsEXT::GENERAL
-                        | vk::DebugUtilsMessageTypeFlagsEXT::VALIDATION
-                        | vk::DebugUtilsMessageTypeFlagsEXT::PERFORMANCE,
-                )
-                .pfn_user_callback(Some(Self::vulkan_debug_callback))
-                .build();
-
-            // create vulkan instance
-            let create_flags = if cfg!(any(target_os = "macos", target_os = "ios")) {
-                vk::InstanceCreateFlags::ENUMERATE_PORTABILITY_KHR
-            } else {
-                vk::InstanceCreateFlags::default()
-            };
-            let instance = {
-                let str_pointers = layers
-                    .iter()
-                    .chain(extensions.iter())
-                    .map(|&s: &&'static _| {
-                        // Safe because `layers` and `extensions` entries have static lifetime.
-                        s.as_ptr()
-                    })
-                    .collect::<Vec<_>>();
-
-                let create_info = vk::InstanceCreateInfo::builder()
-                    .flags(create_flags)
-                    .application_info(&app_info)
-                    .enabled_layer_names(&str_pointers[..layers.len()])
-                    .enabled_extension_names(&str_pointers[layers.len()..]);
-
-                let create_info = create_info.push_next(&mut debug_info);
-
-                entry.create_instance(&create_info, None).unwrap()
-            };
+            let instance = next_renderer_rhi::Instance::new();
 
             // create vulkan surface
-            let surface = window.create_surface_vk(&entry, &instance, None).unwrap();
+            let entry = instance.vulkan_instance().entry();
+            let vulkan_instance = instance.vulkan_instance().instance();
+            let surface = window
+                .create_surface_vk(entry, vulkan_instance, None)
+                .unwrap();
 
             // select physics device
-            let available_physical_devices = instance.enumerate_physical_devices().unwrap();
-            let surface_loader = Surface::new(&entry, &instance);
+            let available_physical_devices = vulkan_instance.enumerate_physical_devices().unwrap();
+            let surface_loader = Surface::new(entry, vulkan_instance);
             let (physical_device, queue_family_index) = available_physical_devices
                 .iter()
                 .find_map(|physical_device| {
-                    instance
+                    vulkan_instance
                         .get_physical_device_queue_family_properties(*physical_device)
                         .iter()
                         .enumerate()
                         .find_map(|(index, info)| {
-                            let is_discrete_gpu = instance
+                            let is_discrete_gpu = vulkan_instance
                                 .get_physical_device_properties(*physical_device)
                                 .device_type
                                 == vk::PhysicalDeviceType::DISCRETE_GPU;
@@ -253,7 +127,7 @@ impl TrianglApplication {
                 .enabled_features(&features)
                 .build();
 
-            let device: Device = instance
+            let device: Device = vulkan_instance
                 .create_device(physical_device, &device_create_info, None)
                 .unwrap();
 
@@ -296,7 +170,7 @@ impl TrianglApplication {
                 .copied()
                 .find(|&mode| mode == vk::PresentModeKHR::MAILBOX)
                 .unwrap_or(vk::PresentModeKHR::FIFO);
-            let swapchain_loader = Swapchain::new(&instance, &device);
+            let swapchain_loader = Swapchain::new(vulkan_instance, &device);
 
             let swapchain_create_info = vk::SwapchainCreateInfoKHR::builder()
                 .surface(surface)
@@ -362,7 +236,7 @@ impl TrianglApplication {
                 })
                 .collect();
             let device_memory_properties =
-                instance.get_physical_device_memory_properties(physical_device);
+                vulkan_instance.get_physical_device_memory_properties(physical_device);
             let depth_image_create_info = vk::ImageCreateInfo::builder()
                 .image_type(vk::ImageType::TYPE_2D)
                 .format(vk::Format::D16_UNORM)
@@ -474,8 +348,6 @@ impl TrianglApplication {
 
             Self {
                 window,
-                _entry: entry,
-                _instance: instance,
                 device,
                 _surface_loader: surface_loader,
                 swapchain_loader,
@@ -499,6 +371,7 @@ impl TrianglApplication {
                 rendering_complete_semaphore,
                 draw_commands_reuse_fence,
                 _setup_commands_reuse_fence: setup_commands_reuse_fence,
+                _instance: instance,
             }
         }
     }
@@ -1054,34 +927,6 @@ impl TrianglApplication {
                     && memory_type.property_flags & flags == flags
             })
             .map(|(index, _memory_type)| index as _)
-    }
-
-    unsafe extern "system" fn vulkan_debug_callback(
-        message_severity: vk::DebugUtilsMessageSeverityFlagsEXT,
-        message_type: vk::DebugUtilsMessageTypeFlagsEXT,
-        p_callback_data: *const vk::DebugUtilsMessengerCallbackDataEXT,
-        _user_data: *mut std::os::raw::c_void,
-    ) -> vk::Bool32 {
-        let callback_data = *p_callback_data;
-        let message_id_number = callback_data.message_id_number;
-
-        let message_id_name = if callback_data.p_message_id_name.is_null() {
-            Cow::from("")
-        } else {
-            CStr::from_ptr(callback_data.p_message_id_name).to_string_lossy()
-        };
-
-        let message = if callback_data.p_message.is_null() {
-            Cow::from("")
-        } else {
-            CStr::from_ptr(callback_data.p_message).to_string_lossy()
-        };
-
-        println!(
-            "{message_severity:?}:\n{message_type:?} [{message_id_name} ({message_id_number})] : {message}\n",
-        );
-
-        vk::FALSE
     }
 }
 
