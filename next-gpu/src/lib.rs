@@ -19,7 +19,7 @@ impl Instance {
 
     #[cfg(all(feature = "vulkan", not(target_arch = "wasm32")))]
     #[inline]
-    pub fn vulkan_instance(&self) -> &VulkanInstance {
+    pub fn vulkan(&self) -> &VulkanInstance {
         &self.vulkan_instance
     }
 }

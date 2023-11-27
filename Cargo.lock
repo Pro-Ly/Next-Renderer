@@ -602,21 +602,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "next-gpu"
+version = "0.1.0"
+dependencies = [
+ "ash",
+ "clippy",
+]
+
+[[package]]
 name = "next-renderer"
 version = "0.1.0"
 dependencies = [
  "ash",
  "clippy",
- "next-renderer-rhi",
+ "next-gpu",
  "winit",
-]
-
-[[package]]
-name = "next-renderer-rhi"
-version = "0.1.0"
-dependencies = [
- "ash",
- "clippy",
 ]
 
 [[package]]

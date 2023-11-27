@@ -4,7 +4,7 @@ use winit::{
     event::{Event, WindowEvent},
     event_loop,
     raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle},
-    window,
+    window::{self, WindowButtons},
 };
 
 pub struct Window {
@@ -20,6 +20,8 @@ impl Window {
         let native_window = window::WindowBuilder::new()
             .with_inner_size(dpi::LogicalSize::new(width, height))
             .with_resizable(false)
+            .with_maximized(false)
+            .with_enabled_buttons(WindowButtons::CLOSE | WindowButtons::MINIMIZE)
             .build(&event_loop)
             .unwrap();
 

@@ -12,7 +12,7 @@ use ash::{
     vk::{self},
     Device,
 };
-use next_renderer_rhi::Instance;
+use next_gpu::Instance;
 use window::Window;
 #[derive(Clone, Debug, Copy)]
 struct Vertex {
@@ -63,11 +63,11 @@ impl TrianglApplication {
             // ----------window part----------
             let window = Window::new(window_width, window_height);
             // ----------vulkan part----------
-            let instance = next_renderer_rhi::Instance::new();
+            let instance = next_gpu::Instance::new();
 
             // create vulkan surface
-            let entry = instance.vulkan_instance().entry();
-            let vulkan_instance = instance.vulkan_instance().instance();
+            let entry = instance.vulkan().entry();
+            let vulkan_instance = instance.vulkan().instance();
             let surface = window
                 .create_surface_vk(entry, vulkan_instance, None)
                 .unwrap();
