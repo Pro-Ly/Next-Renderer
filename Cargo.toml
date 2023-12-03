@@ -17,3 +17,9 @@ winit = "0.29.4"
 
 # vulkan
 ash = "0.37.3"
+
+# dx12
+windows = "0.52.0"
+
+# others
+array-init = "2.0.0"

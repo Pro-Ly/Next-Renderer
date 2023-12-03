@@ -7,12 +7,16 @@ license.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-default = ["vulkan"]
+default = ["vulkan", "dx12"]
 vulkan = ["ash"]
+dx12 = []
 
 [dependencies]
 # vulkan
 ash = { optional = true, workspace = true }
+
+# dx12
+windows = { optional = true, workspace = true }
 
 [dev-dependencies]
 clippy.workspace = true

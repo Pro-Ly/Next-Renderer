@@ -1,3 +1,4 @@
+mod dx12;
 mod vulkan;
 
 use vulkan::instance::VulkanInstance;

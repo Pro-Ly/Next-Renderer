@@ -7,14 +7,26 @@ license.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ash.workspace = true
 winit.workspace = true
 next-gpu.workspace = true
 
+# vulkan
+ash.workspace = true
+
+# dx12
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Direct3D_Fxc",
+    "Win32_Graphics_Direct3D12",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Gdi",
+    "Win32_Security",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Threading",
+    "Win32_System_WindowsProgramming",
+    "Win32_UI_WindowsAndMessaging",
+] }
+array-init.workspace = true
+
 [dev-dependencies]
 clippy.workspace = true
-
-# We want the Vulkan backend on Unix (but not emscripten, macOS, iOS) and Windows.
-[target.'cfg(any(windows, all(unix, not(target_os = "emscripten"), not(target_os = "ios"), not(target_os = "macos"))))'.dependencies.next-gpu]
-workspace = true
-features = ["vulkan"]
