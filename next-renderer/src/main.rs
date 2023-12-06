@@ -1,4 +1,5 @@
 #![deny(clippy::pedantic)]
+#![allow(clippy::wildcard_imports)]
 mod window;
 use std::{
     ffi::CStr,
@@ -956,7 +957,7 @@ trait DXSample {
     where
         Self: Sized;
 
-    fn bind_to_window(&mut self, hwnd: &HWND) -> Result<()>;
+    fn bind_to_window(&mut self, hwnd: HWND) -> Result<()>;
 
     fn update(&mut self) {}
     fn render(&mut self) {}
@@ -995,6 +996,7 @@ where
 {
     let instance = unsafe { GetModuleHandleA(None)? };
 
+    #[allow(clippy::cast_possible_truncation)]
     let wc = WNDCLASSEXA {
         cbSize: std::mem::size_of::<WNDCLASSEXA>() as u32,
         style: CS_HREDRAW | CS_VREDRAW,
@@ -1042,11 +1044,12 @@ where
             None, // no parent window
             None, // no menus
             instance,
+            #[allow(clippy::borrow_as_ptr)]
             Some(&mut sample as *mut _ as _),
         )
     };
 
-    sample.bind_to_window(&hwnd)?;
+    sample.bind_to_window(hwnd)?;
     unsafe { ShowWindow(hwnd, SW_SHOW) };
 
     loop {
@@ -1067,6 +1070,7 @@ where
     Ok(())
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn sample_wndproc<S: DXSample>(sample: &mut S, message: u32, wparam: WPARAM) -> bool {
     match message {
         WM_KEYDOWN => {
@@ -1120,6 +1124,8 @@ extern "system" fn wndproc<S: DXSample>(
     }
 }
 
+#[allow(clippy::default_trait_access)]
+#[allow(clippy::cast_possible_wrap)]
 fn get_hardware_adapter(factory: &IDXGIFactory4) -> Result<IDXGIAdapter1> {
     for i in 0.. {
         let adapter = unsafe { factory.EnumAdapters1(i)? };
@@ -1200,7 +1206,12 @@ mod d3d12_hello_triangle {
             })
         }
 
-        fn bind_to_window(&mut self, hwnd: &HWND) -> Result<()> {
+        #[allow(clippy::too_many_lines)]
+        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::semicolon_if_nothing_returned)]
+        #[allow(clippy::cast_possible_truncation)]
+        #[allow(clippy::cast_precision_loss)]
+        fn bind_to_window(&mut self, hwnd: HWND) -> Result<()> {
             let command_queue: ID3D12CommandQueue = unsafe {
                 self.device.CreateCommandQueue(&D3D12_COMMAND_QUEUE_DESC {
                     Type: D3D12_COMMAND_LIST_TYPE_DIRECT,
@@ -1227,7 +1238,7 @@ mod d3d12_hello_triangle {
             let swap_chain: IDXGISwapChain3 = unsafe {
                 self.dxgi_factory.CreateSwapChainForHwnd(
                     &command_queue,
-                    *hwnd,
+                    hwnd,
                     &swap_chain_desc,
                     None,
                     None,
@@ -1238,7 +1249,7 @@ mod d3d12_hello_triangle {
             // This sample does not support fullscreen transitions
             unsafe {
                 self.dxgi_factory
-                    .MakeWindowAssociation(*hwnd, DXGI_MWA_NO_ALT_ENTER)?;
+                    .MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER)?;
             }
 
             let frame_index = unsafe { swap_chain.GetCurrentBackBufferIndex() };
@@ -1499,6 +1510,9 @@ mod d3d12_hello_triangle {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_sign_loss)]
     fn create_pipeline_state(
         device: &ID3D12Device,
         root_signature: &ID3D12RootSignature,
@@ -1510,12 +1524,12 @@ mod d3d12_hello_triangle {
         };
 
         let exe_path = std::env::current_dir().ok().unwrap();
-        println!("exe_path: {:?}", exe_path);
+        println!("exe_path: {exe_path:?}");
         let asset_path = exe_path;
         let shaders_hlsl_path = asset_path.join("next-renderer\\shaders\\shaders.hlsl");
         let shaders_hlsl = shaders_hlsl_path.to_str().unwrap();
         let shaders_hlsl: HSTRING = shaders_hlsl.into();
-        println!("shaders_hlsl: {:?}", shaders_hlsl);
+        println!("shaders_hlsl: {shaders_hlsl:?}");
         let mut vertex_shader = None;
         let vertex_shader = unsafe {
             D3DCompileFromFile(
@@ -1547,7 +1561,7 @@ mod d3d12_hello_triangle {
             )
         }
         .map(|()| pixel_shader.unwrap())?;
-        println!("vertex_shader: {:?}", vertex_shader);
+        println!("vertex_shader: {vertex_shader:?}");
         let mut input_element_descs: [D3D12_INPUT_ELEMENT_DESC; 2] = [
             D3D12_INPUT_ELEMENT_DESC {
                 SemanticName: s!("POSITION"),
@@ -1628,6 +1642,9 @@ mod d3d12_hello_triangle {
         unsafe { device.CreateGraphicsPipelineState(&desc) }
     }
 
+    #[allow(clippy::semicolon_if_nothing_returned)]
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::ptr_as_ptr)]
     fn create_vertex_buffer(
         device: &ID3D12Device,
         aspect_ratio: f32,
