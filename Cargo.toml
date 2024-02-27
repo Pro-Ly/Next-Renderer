@@ -1,5 +1,5 @@
 [workspace]
-members = ["next-renderer", "next-gpu"]
+members = ["next-renderer", "next-renderer-backend", "next-samples"]
 
 [workspace.package]
 license = "Apache-2.0"
@@ -7,8 +7,7 @@ license = "Apache-2.0"
 [workspace.dependencies]
 # local
 next-renderer = { path = "./next-renderer" }
-next-gpu = { path = "./next-gpu" }
-
+next-renderer-backend = { path = "./next-renderer-backend" }
 # dev
 clippy = "0.0.302"
 
@@ -20,6 +19,3 @@ ash = "0.37.3"
 
 # dx12
 windows = "0.52.0"
-
-# others
-array-init = "2.0.0"
