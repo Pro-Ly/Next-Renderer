@@ -1,11 +1,19 @@
 [package]
-name = "next-renderer-backend"
+name = "next_gpu_backend"
 version = "0.1.0"
+readme.workspace = true
 license.workspace = true
+repository.workspace = true
+keywords = ["gpu", "graphics", "backend", "vulkan", "dx12"]
+categories = ["graphics", "gpu", "backend"]
+description = "GPU driver backend with abstractions for Vulkan and DX12"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+log = { workspace = true }
+bitflags = { workspace = true }
+
 # vulkan
 ash = { wokrspace = true, features = ["linked"] }
 
@@ -24,4 +32,4 @@ windows = { workspace = true, features = [
 ] }
 
 [dev-dependencies]
-clippy.workspace = true
+clippy = { workspace = true }

@@ -12,6 +12,10 @@ pub struct Window {
 }
 
 impl Window {
+    /// ## Panics
+    ///
+    /// Attempting to create the event loop off the main thread will panic.
+    #[must_use]
     pub fn new(width: u32, height: u32) -> Self {
         let event_loop = event_loop::EventLoop::new().unwrap();
         let native_window = window::WindowBuilder::new()
@@ -28,6 +32,9 @@ impl Window {
         }
     }
 
+    /// ## Errors
+    ///
+    /// Returns an error if the event loop encounters an error.
     pub fn run<F: Fn()>(self, update_fn: F) -> Result<(), error::EventLoopError> {
         self.event_loop
             .set_control_flow(event_loop::ControlFlow::Poll);

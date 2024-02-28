@@ -1,0 +1,16 @@
+[package]
+name = "next-samples"
+version = "0.1.0"
+readme.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["samples"]
+categories = ["renderer", "samples"]
+description = "Samples using next-renderer or next-gpu-backend"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+next_renderer = { workspace = true }
+next_gpu_backend = { workspace = true }
+[dev-dependencies]
+clippy = { workspace = true }

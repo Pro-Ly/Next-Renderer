@@ -1,13 +1,16 @@
 [package]
-name = "next-renderer"
+name = "next_renderer"
 version = "0.1.0"
-
 description = "Next Renderer"
 license.workspace = true
+readme.workspace = true
+repository.workspace = true
+keywords = ["renderer"]
+categories = ["graphics"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 winit = { workspace = true }
-next-renderer-backend = { workspace = true }
+next_gpu_backend = { workspace = true }
 [dev-dependencies]
 clippy.workspace = true

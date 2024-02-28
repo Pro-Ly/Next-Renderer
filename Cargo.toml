@@ -1,13 +1,14 @@
 [workspace]
-members = ["next-renderer", "next-renderer-backend", "next-samples"]
+members = ["next_renderer", "next_gpu_backend", "next_samples"]
 
 [workspace.package]
+repository = "https://github.com/Pro-Ly/Next-Renderer"
 license = "Apache-2.0"
-
+readme = "README.md"
 [workspace.dependencies]
 # local
-next-renderer = { path = "./next-renderer" }
-next-renderer-backend = { path = "./next-renderer-backend" }
+next_renderer = { path = "./next_renderer" }
+next_gpu_backend = { path = "./next_gpu_backend" }
 # dev
 clippy = "0.0.302"
 
@@ -19,3 +20,7 @@ ash = "0.37.3"
 
 # dx12
 windows = "0.52.0"
+
+# common
+bitflags = "2.4.2"
+log = "0.4.20"

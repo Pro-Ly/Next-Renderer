@@ -574,29 +574,32 @@ dependencies = [
 ]
 
 [[package]]
-name = "next-renderer"
-version = "0.1.0"
-dependencies = [
- "clippy",
- "next-renderer-backend",
- "winit",
-]
-
-[[package]]
-name = "next-renderer-backend"
-version = "0.1.0"
-dependencies = [
- "ash",
- "clippy",
- "windows",
-]
-
-[[package]]
 name = "next-samples"
 version = "0.1.0"
 dependencies = [
  "clippy",
- "next-renderer",
+ "next_gpu_backend",
+ "next_renderer",
+]
+
+[[package]]
+name = "next_gpu_backend"
+version = "0.1.0"
+dependencies = [
+ "ash",
+ "bitflags 2.4.2",
+ "clippy",
+ "log",
+ "windows",
+]
+
+[[package]]
+name = "next_renderer"
+version = "0.1.0"
+dependencies = [
+ "clippy",
+ "next_gpu_backend",
+ "winit",
 ]
 
 [[package]]
