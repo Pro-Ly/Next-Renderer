@@ -13,7 +13,6 @@ description = "GPU driver backend with abstractions for Vulkan and DX12"
 [dependencies]
 log = { workspace = true }
 bitflags = { workspace = true }
-
 # vulkan
 ash = { wokrspace = true, features = ["linked"] }
 

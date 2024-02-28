@@ -4,14 +4,12 @@ use ash::{extensions::ext::DebugUtils, vk};
 
 use crate::instance::{InstanceDescription, InstanceFlags, RawInstance};
 
-// use ash::extensions::ext::DebugUtils;
-
 #[allow(dead_code)]
 pub struct VulkanInstance {
     entry: ash::Entry,
     instance: ash::Instance,
 }
-#[allow(unused_variables)]
+
 #[allow(clippy::new_without_default)]
 impl VulkanInstance {
     /// ## Panics
@@ -21,14 +19,7 @@ impl VulkanInstance {
     pub fn new(desc: &InstanceDescription) -> Self {
         let entry = ash::Entry::linked();
 
-        log::debug!(
-            "vulkan available version {}.{}.{}",
-            vk::api_version_major(entry.try_enumerate_instance_version().unwrap().unwrap()),
-            vk::api_version_minor(entry.try_enumerate_instance_version().unwrap().unwrap()),
-            vk::api_version_patch(entry.try_enumerate_instance_version().unwrap().unwrap()),
-        );
-
-        println!(
+        log::info!(
             "vulkan available version {}.{}.{}",
             vk::api_version_major(entry.try_enumerate_instance_version().unwrap().unwrap()),
             vk::api_version_minor(entry.try_enumerate_instance_version().unwrap().unwrap()),

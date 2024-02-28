@@ -1,5 +1,5 @@
 [package]
-name = "next-samples"
+name = "next_samples"
 version = "0.1.0"
 readme.workspace = true
 license.workspace = true
@@ -12,5 +12,8 @@ description = "Samples using next-renderer or next-gpu-backend"
 [dependencies]
 next_renderer = { workspace = true }
 next_gpu_backend = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+
 [dev-dependencies]
 clippy = { workspace = true }
