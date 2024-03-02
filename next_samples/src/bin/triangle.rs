@@ -1,4 +1,4 @@
-use next_renderer::{api::instance::Description, rhi::Instance1, window::Window, Backend};
+use next_renderer::{api::instance::Description, rhi::Instance, window::Window, Backend};
 
 extern crate env_logger;
 extern crate log;
@@ -13,6 +13,6 @@ fn main() {
         .filter_level(log::LevelFilter::max())
         .init();
     let window = Window::new(800, 600);
-    let _instance = Instance1::new(Backend::Vulkan, &Description::default());
+    let _instance = Instance::new(Backend::Vulkan, &Description::default());
     window.run(|| {}).unwrap();
 }

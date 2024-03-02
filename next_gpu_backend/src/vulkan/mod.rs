@@ -24,7 +24,7 @@ impl crate::Instance<Api> for Instance {
     fn new(desc: &Description) -> Self {
         let entry = ash::Entry::linked();
 
-        log::info!(
+        log::debug!(
             "vulkan available version {}.{}.{}",
             vk::api_version_major(entry.try_enumerate_instance_version().unwrap().unwrap()),
             vk::api_version_minor(entry.try_enumerate_instance_version().unwrap().unwrap()),
