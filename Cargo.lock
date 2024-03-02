@@ -692,7 +692,6 @@ dependencies = [
  "clippy",
  "env_logger",
  "log",
- "next_gpu_backend",
  "next_renderer",
 ]
 

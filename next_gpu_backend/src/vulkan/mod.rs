@@ -2,21 +2,26 @@ use std::ffi::{c_char, CStr};
 
 use ash::{extensions::ext::DebugUtils, vk};
 
-use crate::instance::{InstanceDescription, InstanceFlags, RawInstance};
+use crate::api::instance::{CreationFlags, Description};
+
+pub struct Api;
+
+impl crate::Api for Api {
+    type Instance = Instance;
+}
 
 #[allow(dead_code)]
-pub struct VulkanInstance {
+pub struct Instance {
     entry: ash::Entry,
     instance: ash::Instance,
 }
 
-#[allow(clippy::new_without_default)]
-impl VulkanInstance {
+impl crate::Instance<Api> for Instance {
     /// ## Panics
     ///
     /// Panics if the instance creation fails.
     #[must_use]
-    pub fn new(desc: &InstanceDescription) -> Self {
+    fn new(desc: &Description) -> Self {
         let entry = ash::Entry::linked();
 
         log::info!(
@@ -27,7 +32,7 @@ impl VulkanInstance {
         );
 
         let mut layer_names = Vec::new();
-        if desc.flags().contains(InstanceFlags::VALIDATION) {
+        if desc.flags().contains(CreationFlags::VALIDATION) {
             layer_names.push(unsafe {
                 CStr::from_bytes_with_nul_unchecked(b"VK_LAYER_LUNARG_standard_validation\0")
             });
@@ -40,7 +45,7 @@ impl VulkanInstance {
 
         let mut extension_names = Vec::new();
 
-        if desc.flags().contains(InstanceFlags::DEBUG) {
+        if desc.flags().contains(CreationFlags::DEBUG) {
             extension_names.push(DebugUtils::name().as_ptr());
         }
 
@@ -106,5 +111,3 @@ impl VulkanInstance {
         Self { entry, instance }
     }
 }
-
-impl RawInstance for VulkanInstance {}

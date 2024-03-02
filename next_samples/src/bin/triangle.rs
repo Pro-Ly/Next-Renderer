@@ -1,12 +1,7 @@
-use next_gpu_backend::{
-    instance::{Instance, InstanceDescription},
-    Backend,
-};
-use next_renderer::window::Window;
+use next_renderer::{api::instance::Description, rhi::Instance1, window::Window, Backend};
 
 extern crate env_logger;
 extern crate log;
-extern crate next_gpu_backend;
 extern crate next_renderer;
 
 fn main() {
@@ -18,6 +13,6 @@ fn main() {
         .filter_level(log::LevelFilter::max())
         .init();
     let window = Window::new(800, 600);
-    let _instance = Instance::new(Backend::Vulkan, &InstanceDescription::default());
+    let _instance = Instance1::new(Backend::Vulkan, &Description::default());
     window.run(|| {}).unwrap();
 }
